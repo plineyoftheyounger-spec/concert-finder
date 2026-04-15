@@ -1,0 +1,12 @@
+# Output files
+upcoming_shows.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# OS
+.DS_Store
+Thumbs.db
