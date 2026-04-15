@@ -297,6 +297,11 @@ const LASTFM_USER = "thoM_Moht";
 const TM_KEY      = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB";
 const TM_LATLONG  = "37.8044,-122.2712";  // Oakland, CA
 const TM_RADIUS   = "50";                 // miles
+
+const EB_KEY      = "RZ6OPWVOVYVVYDZMXA";
+const EB_LAT      = "37.8044";
+const EB_LNG      = "-122.2712";
+const EB_RADIUS   = "50mi";
 const LIMIT       = 100;
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -357,6 +362,50 @@ async function fetchEvents(artistName) {
         if (!res.ok) return [];
         const data = await res.json();
         return data._embedded?.events || [];
+    } catch { return []; }
+}
+
+// ── Eventbrite ────────────────────────────────────────────────────────────────
+async function fetchEventsEB(artistName) {
+    try {
+        const today = new Date().toISOString().split("T")[0] + "T00:00:00";
+        const params = new URLSearchParams({
+            token:                    EB_KEY,
+            q:                        artistName,
+            "location.latitude":      EB_LAT,
+            "location.longitude":     EB_LNG,
+            "location.within":        EB_RADIUS,
+            "categories":             "103",   // Music
+            "start_date.range_start": today,
+            expand:                   "venue",
+            sort_by:                  "date",
+        });
+        const res = await fetch(
+            `https://www.eventbriteapi.com/v3/events/search/?${params}`,
+            { signal: AbortSignal.timeout(8000) }
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.events || []).map(ev => {
+            const venue = ev.venue || {};
+            const addr  = venue.address || {};
+            const date  = new Date(ev.start?.utc || ev.start?.local);
+            if (isNaN(date.getTime()) || date <= new Date()) return null;
+            return {
+                eventId:       "eb_" + ev.id,
+                artist:        artistName,
+                showName:      ev.name?.text || artistName,
+                plays:         0,   // filled in by caller
+                date,
+                venue:         venue.name || "TBA",
+                city:          addr.city  || "",
+                state:         addr.region || "CA",
+                lineup:        [],
+                matchedArtists:[artistName],
+                ticketUrl:     ev.url || "",
+                source:        "eventbrite",
+            };
+        }).filter(Boolean);
     } catch { return []; }
 }
 
@@ -441,12 +490,17 @@ async function loadShows() {
         const pct = Math.round(((i + 1) / artists.length) * 100);
         setProgress(pct, `[${i + 1} / ${artists.length}]  ${name}`);
 
-        const events = await fetchEvents(name);
-        for (const ev of events) {
+        // Fetch from both sources in parallel
+        const [tmEvents, ebShows] = await Promise.all([
+            fetchEvents(name),
+            fetchEventsEB(name),
+        ]);
+
+        // Process Ticketmaster results
+        for (const ev of tmEvents) {
             const show = extractShowData(ev, name, plays);
             if (!show) continue;
             if (showMap.has(ev.id)) {
-                // Same event found for another artist — add to matched list
                 const existing = showMap.get(ev.id);
                 if (!existing.matchedArtists.includes(name)) {
                     existing.matchedArtists.push(name);
@@ -457,6 +511,23 @@ async function loadShows() {
                 showMap.set(ev.id, show);
             }
         }
+
+        // Process Eventbrite results
+        for (const show of ebShows) {
+            show.plays = plays;
+            // Dedup key: date + venue name (cross-platform shows may appear in both)
+            const dedupKey = `${show.date.toDateString()}_${show.venue.toLowerCase().replace(/\s+/g,"")}`;
+            if (showMap.has(dedupKey)) {
+                const existing = showMap.get(dedupKey);
+                if (!existing.matchedArtists.includes(name)) {
+                    existing.matchedArtists.push(name);
+                    existing.plays = Math.max(existing.plays, plays);
+                }
+            } else {
+                showMap.set(show.eventId, show);
+            }
+        }
+
         await sleep(250);
     }
 
