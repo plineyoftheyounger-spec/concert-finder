@@ -343,18 +343,59 @@ async function fetchTopArtists(period) {
 }
 
 // ── Ticketmaster ─────────────────────────────────────────────────────────────
-async function fetchEvents(artistName) {
+
+// Cache attraction IDs so we don't re-look them up
+const tmAttractionCache = new Map();
+
+async function getTMAttractionId(artistName) {
+    if (tmAttractionCache.has(artistName)) return tmAttractionCache.get(artistName);
     try {
         const params = new URLSearchParams({
             apikey:             TM_KEY,
             keyword:            artistName,
-            latlong:            TM_LATLONG,
-            radius:             TM_RADIUS,
-            unit:               "miles",
             classificationName: "Music",
-            size:               10,
-            sort:               "date,asc",
+            size:               1,
         });
+        const res = await fetch(
+            `https://app.ticketmaster.com/discovery/v2/attractions.json?${params}`,
+            { signal: AbortSignal.timeout(6000) }
+        );
+        if (!res.ok) { tmAttractionCache.set(artistName, null); return null; }
+        const data = await res.json();
+        const attraction = data._embedded?.attractions?.[0];
+        // Only use it if the name closely matches
+        if (!attraction) { tmAttractionCache.set(artistName, null); return null; }
+        const match = attraction.name.toLowerCase().trim() === artistName.toLowerCase().trim();
+        const id = match ? attraction.id : null;
+        tmAttractionCache.set(artistName, id);
+        return id;
+    } catch { return null; }
+}
+
+async function fetchEvents(artistName) {
+    try {
+        const attractionId = await getTMAttractionId(artistName);
+        // If we found a precise attraction ID use it, otherwise fall back to keyword
+        const params = attractionId
+            ? new URLSearchParams({
+                apikey:  TM_KEY,
+                attractionId,
+                latlong: TM_LATLONG,
+                radius:  TM_RADIUS,
+                unit:    "miles",
+                size:    10,
+                sort:    "date,asc",
+            })
+            : new URLSearchParams({
+                apikey:             TM_KEY,
+                keyword:            artistName,
+                latlong:            TM_LATLONG,
+                radius:             TM_RADIUS,
+                unit:               "miles",
+                classificationName: "Music",
+                size:               10,
+                sort:               "date,asc",
+            });
         const res = await fetch(
             `https://app.ticketmaster.com/discovery/v2/events.json?${params}`,
             { signal: AbortSignal.timeout(8000) }
@@ -386,11 +427,15 @@ async function fetchEventsEB(artistName) {
         );
         if (!res.ok) return [];
         const data = await res.json();
+        const artistLower = artistName.toLowerCase();
         return (data.events || []).map(ev => {
             const venue = ev.venue || {};
             const addr  = venue.address || {};
             const date  = new Date(ev.start?.utc || ev.start?.local);
             if (isNaN(date.getTime()) || date <= new Date()) return null;
+            // Filter out events where the artist name doesn't appear in the title
+            const titleLower = (ev.name?.text || "").toLowerCase();
+            if (!titleLower.includes(artistLower)) return null;
             return {
                 eventId:       "eb_" + ev.id,
                 artist:        artistName,
