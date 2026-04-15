@@ -224,7 +224,7 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 <!-- Splash / first load -->
 <div id="splash">
     <h2>Find shows from your Last.fm artists</h2>
-    <p>Pulls your top 100 most-played artists and checks for<br>upcoming Bay Area concerts via Bandsintown.</p>
+    <p>Pulls your top 100 most-played artists and checks for<br>upcoming Bay Area concerts via Ticketmaster.</p>
     <button class="big-btn" onclick="loadShows()">Load My Shows</button>
 </div>
 
@@ -294,19 +294,9 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 // ── Config ────────────────────────────────────────────────────────────────────
 const LASTFM_KEY  = "98911dfeb5e40162072b3bc1af478cd1";
 const LASTFM_USER = "thoM_Moht";
-const BIT_APP_ID  = "concert_finder_thoM";
+const TM_KEY      = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB";
+const TM_DMA      = 249;   // Ticketmaster DMA for SF Bay Area
 const LIMIT       = 100;
-
-const BAY_AREA = new Set([
-    "oakland","san francisco","berkeley","emeryville","alameda","richmond",
-    "el cerrito","san leandro","hayward","fremont","union city","newark",
-    "san jose","santa clara","palo alto","mountain view","sunnyvale","cupertino",
-    "concord","walnut creek","pleasant hill","pittsburg","antioch","livermore",
-    "pleasanton","dublin","san ramon","danville","martinez",
-    "san mateo","redwood city","daly city","south san francisco","burlingame",
-    "mill valley","sausalito","san rafael","novato","marin","petaluma",
-    "napa","vallejo","benicia","fairfield",
-]);
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let allShows   = [];
@@ -346,27 +336,63 @@ async function fetchTopArtists(period) {
     return data.topartists.artist.map(a => ({ name: a.name, plays: parseInt(a.playcount, 10) }));
 }
 
-// ── Bandsintown ───────────────────────────────────────────────────────────────
+// ── Ticketmaster ─────────────────────────────────────────────────────────────
 async function fetchEvents(artistName) {
     try {
+        const params = new URLSearchParams({
+            apikey:             TM_KEY,
+            keyword:            artistName,
+            dmaId:              TM_DMA,
+            classificationName: "Music",
+            size:               10,
+            sort:               "date,asc",
+        });
         const res = await fetch(
-            `https://rest.bandsintown.com/artists/${encodeURIComponent(artistName)}/events?app_id=${BIT_APP_ID}`,
-            { signal: AbortSignal.timeout(7000) }
+            `https://app.ticketmaster.com/discovery/v2/events.json?${params}`,
+            { signal: AbortSignal.timeout(8000) }
         );
         if (!res.ok) return [];
         const data = await res.json();
-        return Array.isArray(data) ? data : [];
+        return data._embedded?.events || [];
     } catch { return []; }
 }
 
-function isBayArea(ev) {
-    const v       = ev.venue || {};
-    const city    = (v.city    || "").toLowerCase().trim();
-    const region  = (v.region  || "").toLowerCase().trim();
-    const country = (v.country || "").toLowerCase().trim();
-    if (!["united states","us","usa"].includes(country)) return false;
-    if (!["ca","california"].includes(region))           return false;
-    return [...BAY_AREA].some(bc => city.includes(bc));
+function extractShowData(ev, artistName, plays) {
+    const venue     = ev._embedded?.venues?.[0] || {};
+    const city      = venue.city?.name  || "";
+    const stateCode = venue.state?.stateCode || "";
+
+    // Use local date+time if available, fall back to UTC datetime
+    let date;
+    const start = ev.dates?.start || {};
+    if (start.dateTime) {
+        date = new Date(start.dateTime);
+    } else if (start.localDate) {
+        date = new Date(`${start.localDate}T${start.localTime || "00:00:00"}`);
+    } else {
+        return null;
+    }
+
+    if (isNaN(date.getTime()) || date <= new Date()) return null;
+
+    // Support acts from attractions list (excluding headliner)
+    const attractions = ev._embedded?.attractions || [];
+    const lineup = attractions
+        .map(a => a.name)
+        .filter(n => n.toLowerCase() !== artistName.toLowerCase());
+
+    return {
+        eventId:   ev.id,
+        artist:    artistName,
+        showName:  ev.name || artistName,
+        plays,
+        date,
+        venue:     venue.name || "TBA",
+        city,
+        state:     stateCode,
+        lineup,
+        ticketUrl: ev.url || "",
+    };
 }
 
 // ── Main load ─────────────────────────────────────────────────────────────────
@@ -404,8 +430,7 @@ async function loadShows() {
     }
 
     maxPlays = Math.max(...artists.map(a => a.plays), 1);
-    allShows = [];
-    const now = new Date();
+    const showMap = new Map();  // eventId -> show (deduplicates multi-artist events)
 
     // 2. Check each artist
     for (let i = 0; i < artists.length; i++) {
@@ -415,24 +440,24 @@ async function loadShows() {
 
         const events = await fetchEvents(name);
         for (const ev of events) {
-            if (!isBayArea(ev)) continue;
-            const date = new Date(ev.datetime);
-            if (isNaN(date.getTime()) || date <= now) continue;
-            const v      = ev.venue  || {};
-            const offers = ev.offers || [];
-            allShows.push({
-                artist:    name,
-                plays,
-                date,
-                venue:     v.name || "TBA",
-                city:      v.city || "",
-                lineup:    (ev.lineup || []).filter(x => x.toLowerCase() !== name.toLowerCase()),
-                infoUrl:   ev.url || "",
-                ticketUrl: offers[0]?.url || "",
-            });
+            const show = extractShowData(ev, name, plays);
+            if (!show) continue;
+            if (showMap.has(ev.id)) {
+                // Same event found for another artist — add to matched list
+                const existing = showMap.get(ev.id);
+                if (!existing.matchedArtists.includes(name)) {
+                    existing.matchedArtists.push(name);
+                    existing.plays = Math.max(existing.plays, plays);
+                }
+            } else {
+                show.matchedArtists = [name];
+                showMap.set(ev.id, show);
+            }
         }
-        await sleep(130);
+        await sleep(250);
     }
+
+    allShows = [...showMap.values()];
 
     // 3. Populate city dropdown
     const cities = [...new Set(allShows.map(s => s.city))].sort();
@@ -510,13 +535,22 @@ function renderCards(shows) {
             hour: "numeric", minute: "2-digit"
         });
 
+        // Show all matched artists from your library
+        const artistLabel = s.matchedArtists.length > 1
+            ? s.matchedArtists.join(" · ")
+            : s.artist;
+
+        // Support acts (not from your library)
         const lineupHtml = s.lineup.length
             ? `<div class="card-lineup">+ ${esc(s.lineup.join(", "))}</div>` : "";
 
-        const linksHtml = [
-            s.infoUrl   ? `<a class="card-link info"    href="${esc(s.infoUrl)}"   target="_blank" rel="noopener">Info</a>`    : "",
-            s.ticketUrl ? `<a class="card-link tickets" href="${esc(s.ticketUrl)}" target="_blank" rel="noopener">Tickets</a>` : "",
-        ].join("");
+        // Show event name if it differs meaningfully from artist name
+        const showTitle = s.showName && s.showName.toLowerCase() !== s.artist.toLowerCase()
+            ? `<div class="card-lineup" style="color:#888;font-style:italic">${esc(s.showName)}</div>` : "";
+
+        const linksHtml = s.ticketUrl
+            ? `<a class="card-link tickets" href="${esc(s.ticketUrl)}" target="_blank" rel="noopener">Tickets</a>`
+            : "";
 
         const playsWidth = Math.max(10, Math.round((s.plays / maxPlays) * 100));
         const playsColor = playsWidth > 66 ? "#e94560"
@@ -526,15 +560,16 @@ function renderCards(shows) {
         return `
 <div class="card">
     <div class="card-top">
-        <span class="card-artist">${esc(s.artist)}</span>
+        <span class="card-artist">${esc(artistLabel)}</span>
         <span class="card-plays">${s.plays.toLocaleString()} plays</span>
     </div>
     <div style="height:3px;background:#f0f0f2;border-radius:99px;margin:4px 0 6px">
         <div style="height:100%;width:${playsWidth}%;background:${playsColor};border-radius:99px"></div>
     </div>
+    ${showTitle}
     <div class="card-date">${esc(dateStr)} &nbsp;·&nbsp; ${esc(timeStr)}</div>
     <div class="card-venue">${esc(s.venue)}</div>
-    <div class="card-city">${esc(s.city)}, CA</div>
+    <div class="card-city">${esc(s.city)}, ${esc(s.state)}</div>
     ${lineupHtml}
     ${linksHtml ? `<div class="card-links">${linksHtml}</div>` : ""}
 </div>`;
