@@ -295,7 +295,8 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 const LASTFM_KEY  = "98911dfeb5e40162072b3bc1af478cd1";
 const LASTFM_USER = "thoM_Moht";
 const TM_KEY      = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB";
-const TM_DMA      = 249;   // Ticketmaster DMA for SF Bay Area
+const TM_LATLONG  = "37.8044,-122.2712";  // Oakland, CA
+const TM_RADIUS   = "50";                 // miles
 const LIMIT       = 100;
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -342,7 +343,9 @@ async function fetchEvents(artistName) {
         const params = new URLSearchParams({
             apikey:             TM_KEY,
             keyword:            artistName,
-            dmaId:              TM_DMA,
+            latlong:            TM_LATLONG,
+            radius:             TM_RADIUS,
+            unit:               "miles",
             classificationName: "Music",
             size:               10,
             sort:               "date,asc",
