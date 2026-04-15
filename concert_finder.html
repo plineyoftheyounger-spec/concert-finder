@@ -224,7 +224,7 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 <!-- Splash / first load -->
 <div id="splash">
     <h2>Find shows from your Last.fm artists</h2>
-    <p>Pulls your top 100 most-played artists and checks for<br>upcoming Bay Area concerts via Ticketmaster.</p>
+    <p>Pulls your top 500 most-played artists and checks for<br>upcoming Bay Area concerts via Ticketmaster + Eventbrite.</p>
     <button class="big-btn" onclick="loadShows()">Load My Shows</button>
 </div>
 
@@ -302,7 +302,7 @@ const EB_KEY      = "RZ6OPWVOVYVVYDZMXA";
 const EB_LAT      = "37.8044";
 const EB_LNG      = "-122.2712";
 const EB_RADIUS   = "50mi";
-const LIMIT       = 100;
+const LIMIT       = 500;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let allShows   = [];
