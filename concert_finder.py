@@ -1,11 +1,15 @@
+import csv
+import os
 import requests
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
 
 # --- Config ---
 LASTFM_API_KEY = "98911dfeb5e40162072b3bc1af478cd1"
 LASTFM_USER    = "thoM_Moht"
 BIT_APP_ID     = "concert_finder_thoM"
+USER_DATA_DIR  = r"C:\Users\Thomas\AI\concert-finder\user_data_26161906"
 
 # Bay Area cities (lowercase for matching)
 BAY_AREA = {
@@ -24,8 +28,8 @@ PERIOD = "overall"
 
 # ---------------------------------------------------------------
 
-def get_top_artists():
-    print(f"Fetching top {ARTIST_LIMIT} artists for {LASTFM_USER} ({PERIOD})...")
+def get_lastfm_artists():
+    print(f"Fetching top {ARTIST_LIMIT} artists from Last.fm ({LASTFM_USER}, {PERIOD})...")
     resp = requests.get(
         "https://ws.audioscrobbler.com/2.0/",
         params={
@@ -40,7 +44,53 @@ def get_top_artists():
     )
     resp.raise_for_status()
     artists = resp.json()["topartists"]["artist"]
-    return [(a["name"], int(a["playcount"])) for a in artists]
+    return {a["name"]: {"plays": int(a["playcount"]), "source": "lastfm"} for a in artists}
+
+
+def get_tidal_artists():
+    """Read TIDAL export: favorite artists + streaming history play counts."""
+    artists = {}
+
+    fav_path = os.path.join(USER_DATA_DIR, "favorite_artists.csv")
+    if os.path.exists(fav_path):
+        with open(fav_path, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                name = row["artist_name"].strip()
+                if name:
+                    artists[name] = {"plays": 0, "source": "tidal_fav"}
+
+    stream_path = os.path.join(USER_DATA_DIR, "streaming.csv")
+    if os.path.exists(stream_path):
+        print("Reading TIDAL streaming history (this may take a moment)...")
+        stream_counts = defaultdict(int)
+        with open(stream_path, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                name = row.get("artist_name", "").strip()
+                if name:
+                    stream_counts[name] += 1
+        for name, count in stream_counts.items():
+            if name in artists:
+                artists[name]["plays"] = count
+                artists[name]["source"] = "tidal"
+            else:
+                artists[name] = {"plays": count, "source": "tidal"}
+
+    return artists
+
+
+def merge_artists(lastfm, tidal):
+    """Merge Last.fm and TIDAL artist dicts, preferring Last.fm play counts."""
+    merged = dict(lastfm)
+    lastfm_lower = {k.lower(): k for k in lastfm}
+
+    for name, data in tidal.items():
+        match = lastfm_lower.get(name.lower())
+        if match:
+            merged[match]["source"] = "both"
+        else:
+            merged[name] = data
+
+    return merged
 
 
 def get_events(artist_name):
@@ -78,25 +128,32 @@ def parse_date(dt_str):
 
 
 def main():
-    artists = get_top_artists()
-    print(f"Got {len(artists)} artists. Searching for Bay Area shows...\n")
+    lastfm = get_lastfm_artists()
+    tidal  = get_tidal_artists()
+    all_artists = merge_artists(lastfm, tidal)
+
+    print(f"\nTotal artists to check: {len(all_artists)} "
+          f"({len(lastfm)} Last.fm + {len(tidal)} TIDAL, merged)\n")
+    print("Searching for Bay Area shows...\n")
 
     shows = []
     now   = datetime.now(timezone.utc)
+    artist_list = list(all_artists.items())
 
-    for i, (artist, plays) in enumerate(artists, 1):
-        print(f"  [{i:>3}/{len(artists)}] {artist} ({plays:,} plays)", end="\r")
+    for i, (artist, data) in enumerate(artist_list, 1):
+        print(f"  [{i:>3}/{len(artist_list)}] {artist}", end="\r")
         events = get_events(artist)
         for ev in events:
             if not is_bay_area(ev):
                 continue
             date = parse_date(ev.get("datetime", ""))
             if date and date > now:
-                venue = ev.get("venue", {})
+                venue  = ev.get("venue", {})
                 offers = ev.get("offers", [])
                 shows.append({
                     "artist":   artist,
-                    "plays":    plays,
+                    "plays":    data["plays"],
+                    "source":   data["source"],
                     "date":     date,
                     "venue":    venue.get("name", "Unknown venue"),
                     "city":     venue.get("city", ""),
@@ -104,51 +161,47 @@ def main():
                     "info_url": ev.get("url", ""),
                     "ticket":   offers[0].get("url", "") if offers else "",
                 })
-        time.sleep(0.15)   # be polite to the API
+        time.sleep(0.15)
 
-    print(" " * 70)  # clear the progress line
+    print(" " * 70)
 
     if not shows:
-        print("No upcoming Bay Area shows found for your top artists.")
+        print("No upcoming Bay Area shows found for your artists.")
         return
 
     shows.sort(key=lambda x: x["date"])
 
-    # --- Print results ---
-    print(f"\nFound {len(shows)} upcoming Bay Area show(s):\n")
-    print("=" * 65)
+    source_label = {"lastfm": "Last.fm", "tidal": "TIDAL", "tidal_fav": "TIDAL fav", "both": "Last.fm+TIDAL"}
 
-    for s in shows:
+    def format_show(s):
         date_fmt = s["date"].strftime("%a  %b %d, %Y  %I:%M %p")
         others   = [x for x in s["lineup"] if x.lower() != s["artist"].lower()]
-        print(f"\n{s['artist']}  ({s['plays']:,} plays)")
-        print(f"  {date_fmt}")
-        print(f"  {s['venue']}, {s['city']}")
+        src      = source_label.get(s["source"], s["source"])
+        lines    = [
+            f"\n{s['artist']}  ({s['plays']:,} plays via {src})",
+            f"  {date_fmt}",
+            f"  {s['venue']}, {s['city']}",
+        ]
         if others:
-            print(f"  Also on bill: {', '.join(others)}")
+            lines.append(f"  Also on bill: {', '.join(others)}")
         if s["info_url"]:
-            print(f"  Info:    {s['info_url']}")
+            lines.append(f"  Info:    {s['info_url']}")
         if s["ticket"]:
-            print(f"  Tickets: {s['ticket']}")
+            lines.append(f"  Tickets: {s['ticket']}")
+        return "\n".join(lines)
 
-    # --- Save to file ---
+    print(f"\nFound {len(shows)} upcoming Bay Area show(s):\n")
+    print("=" * 65)
+    for s in shows:
+        print(format_show(s))
+
     out_path = r"C:\Users\Thomas\AI\upcoming_shows.txt"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(f"Bay Area Shows — pulled {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
-        f.write(f"Based on Last.fm top {ARTIST_LIMIT} artists ({PERIOD})\n")
+        f.write(f"Based on Last.fm top {ARTIST_LIMIT} ({PERIOD}) + TIDAL export\n")
         f.write("=" * 65 + "\n")
         for s in shows:
-            date_fmt = s["date"].strftime("%a  %b %d, %Y  %I:%M %p")
-            others   = [x for x in s["lineup"] if x.lower() != s["artist"].lower()]
-            f.write(f"\n{s['artist']}  ({s['plays']:,} plays)\n")
-            f.write(f"  {date_fmt}\n")
-            f.write(f"  {s['venue']}, {s['city']}\n")
-            if others:
-                f.write(f"  Also on bill: {', '.join(others)}\n")
-            if s["info_url"]:
-                f.write(f"  Info:    {s['info_url']}\n")
-            if s["ticket"]:
-                f.write(f"  Tickets: {s['ticket']}\n")
+            f.write(format_show(s) + "\n")
 
     print(f"\n\nResults also saved to {out_path}")
 

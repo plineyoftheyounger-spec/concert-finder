@@ -1,5 +1,9 @@
 # Output files
 upcoming_shows.txt
+recommended_shows.txt
+
+# Personal TIDAL/streaming export data — contains PII (IP addresses, payment logs, etc.)
+user_data_*/
 
 # Python
 __pycache__/

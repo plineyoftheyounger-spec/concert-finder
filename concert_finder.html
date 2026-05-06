@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bay Area Concert Finder</title>
+<title>Concert Finder</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -18,11 +18,14 @@ body {
 header {
     background: #1a1a2e;
     color: white;
-    padding: 22px 32px;
+    padding: 22px 32px 0;
+}
+.header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    padding-bottom: 16px;
 }
 header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
@@ -43,14 +46,34 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 .load-btn:hover    { background: #c73652; }
 .load-btn:disabled { background: #555; cursor: not-allowed; }
 
+/* ---- Tabs ---- */
+.tabs {
+    display: flex;
+    gap: 4px;
+}
+.tab-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+}
+.tab-btn:hover  { color: rgba(255,255,255,0.85); }
+.tab-btn.active { color: white; border-bottom-color: #e94560; }
+
 /* ---- Splash ---- */
-#splash {
+.splash {
     text-align: center;
     padding: 80px 32px;
 }
-#splash h2 { font-size: 1.4rem; color: #1a1a2e; }
-#splash p  { color: #777; margin-top: 10px; font-size: 0.95rem; line-height: 1.6; }
-#splash .big-btn {
+.splash h2 { font-size: 1.4rem; color: #1a1a2e; }
+.splash p  { color: #777; margin-top: 10px; font-size: 0.95rem; line-height: 1.6; }
+.splash .big-btn {
     margin-top: 32px;
     display: inline-block;
     background: #e94560;
@@ -62,10 +85,10 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
     font-size: 1rem;
     font-weight: 600;
 }
-#splash .big-btn:hover { background: #c73652; }
+.splash .big-btn:hover { background: #c73652; }
 
 /* ---- Filters ---- */
-#filtersBar {
+.filtersBar {
     background: white;
     border-bottom: 1px solid #e0e0e0;
     padding: 14px 32px;
@@ -109,12 +132,12 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 .qd-btn.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
 
 /* ---- Progress ---- */
-#progressSection {
+.progressSection {
     display: none;
     padding: 48px 32px;
     text-align: center;
 }
-#progressText { font-size: 0.9rem; color: #666; margin-bottom: 12px; }
+.progressText { font-size: 0.9rem; color: #666; margin-bottom: 12px; }
 .bar-track {
     background: #e0e0e0;
     border-radius: 99px;
@@ -124,7 +147,7 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
     margin: 0 auto;
     overflow: hidden;
 }
-#progressBar {
+.progressBar {
     height: 100%;
     background: #e94560;
     border-radius: 99px;
@@ -133,14 +156,14 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 }
 
 /* ---- Results header ---- */
-#resultsHeader {
+.resultsHeader {
     display: none;
     padding: 18px 32px 4px;
     justify-content: space-between;
     align-items: center;
 }
-#resultsCount { font-size: 0.88rem; color: #888; }
-#sortSelect {
+.resultsCount { font-size: 0.88rem; color: #888; }
+.sortSelect {
     border: 1px solid #d5d5d5;
     border-radius: 6px;
     padding: 6px 10px;
@@ -149,7 +172,7 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 }
 
 /* ---- Cards ---- */
-#cards {
+.cards {
     padding: 16px 32px 48px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -166,8 +189,9 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
     flex-direction: column;
     gap: 5px;
 }
+.card.discover { border-left-color: #7c3aed; }
 
-.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .card-artist { font-size: 1rem; font-weight: 700; color: #1a1a2e; }
 .card-plays {
     font-size: 0.75rem;
@@ -176,8 +200,26 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
     padding: 2px 7px;
     border-radius: 99px;
     white-space: nowrap;
-    margin-left: 8px;
     flex-shrink: 0;
+}
+.card-new-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    background: #7c3aed;
+    padding: 2px 7px;
+    border-radius: 99px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.card-because {
+    font-size: 0.78rem;
+    color: #7c3aed;
+    font-style: italic;
+    margin-bottom: 2px;
 }
 
 .card-date   { font-size: 0.88rem; color: #555; }
@@ -200,7 +242,7 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 .card-link.tickets { background: #e94560; color: white; }
 
 /* ---- Empty / Error ---- */
-#emptyMsg, #errorMsg {
+.emptyMsg, .errorMsg {
     display: none;
     text-align: center;
     padding: 60px 32px;
@@ -208,96 +250,165 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
     font-size: 0.95rem;
     line-height: 1.7;
 }
-#errorMsg { color: #e94560; }
+.errorMsg { color: #e94560; }
+
+/* ---- Tab panels ---- */
+.panel { display: none; }
+.panel.active { display: block; }
 </style>
 </head>
 <body>
 
 <header>
-    <div>
-        <h1>Bay Area Concert Finder</h1>
-        <p>Last.fm: thoM_Moht &nbsp;·&nbsp; Oakland / SF / Berkeley + Bay Area</p>
+    <div class="header-top">
+        <div>
+            <h1>Concert Finder</h1>
+            <p>Last.fm: thoM_Moht &nbsp;·&nbsp; Oakland / SF / Bay Area</p>
+        </div>
+        <button class="load-btn" id="myShowsRefreshBtn" onclick="loadShows()" style="display:none">Refresh</button>
+        <button class="load-btn" id="discoverRefreshBtn" onclick="loadRecommendations()" style="display:none">Refresh</button>
     </div>
-    <button class="load-btn" id="headerBtn" onclick="loadShows()" style="display:none">Refresh</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('myshows', this)">My Shows</button>
+        <button class="tab-btn"        onclick="switchTab('discover', this)">Discover</button>
+    </div>
 </header>
 
-<!-- Splash / first load -->
-<div id="splash">
-    <h2>Find shows from your Last.fm artists</h2>
-    <p>Pulls your top 250 most-played artists and checks for<br>upcoming Bay Area concerts via Ticketmaster + Eventbrite.</p>
-    <button class="big-btn" onclick="loadShows()">Load My Shows</button>
-</div>
+<!-- ═══════════════ MY SHOWS PANEL ═══════════════ -->
+<div class="panel active" id="panel-myshows">
 
-<!-- Filters (shown after first load) -->
-<div id="filtersBar">
-    <div class="filter-group">
-        <label>Last.fm Period</label>
-        <select id="periodSelect">
-            <option value="overall">All Time</option>
-            <option value="12month">12 Months</option>
-            <option value="6month">6 Months</option>
-            <option value="3month">3 Months</option>
-            <option value="1month">1 Month</option>
-        </select>
+    <div class="splash" id="ms-splash">
+        <h2>Find shows from your artists</h2>
+        <p>Pulls your top 250 most-played Last.fm artists and checks for<br>upcoming Bay Area concerts via Ticketmaster + Eventbrite.</p>
+        <button class="big-btn" onclick="loadShows()">Load My Shows</button>
     </div>
-    <div class="filter-group">
-        <label>Min Plays</label>
-        <select id="minPlaysSelect">
-            <option value="0">Any</option>
-            <option value="10" selected>10+</option>
-            <option value="25">25+</option>
-            <option value="50">50+</option>
-            <option value="100">100+</option>
-            <option value="250">250+</option>
-            <option value="500">500+</option>
-            <option value="1000">1,000+</option>
-        </select>
-    </div>
-    <div class="filter-group">
-        <label>City</label>
-        <select id="cityFilter">
-            <option value="">All Bay Area</option>
-        </select>
-    </div>
-    <div class="filter-group">
-        <label>When</label>
-        <div class="quick-dates">
-            <button class="qd-btn active" data-range="all"    onclick="setRange(this,'all')">All</button>
-            <button class="qd-btn"        data-range="week"   onclick="setRange(this,'week')">This Week</button>
-            <button class="qd-btn"        data-range="month"  onclick="setRange(this,'month')">This Month</button>
-            <button class="qd-btn"        data-range="3month" onclick="setRange(this,'3month')">3 Months</button>
+
+    <div class="filtersBar" id="ms-filtersBar">
+        <div class="filter-group">
+            <label>Last.fm Period</label>
+            <select id="periodSelect">
+                <option value="overall">All Time</option>
+                <option value="12month">12 Months</option>
+                <option value="6month">6 Months</option>
+                <option value="3month">3 Months</option>
+                <option value="1month">1 Month</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Min Plays</label>
+            <select id="minPlaysSelect">
+                <option value="0">Any</option>
+                <option value="10" selected>10+</option>
+                <option value="25">25+</option>
+                <option value="50">50+</option>
+                <option value="100">100+</option>
+                <option value="250">250+</option>
+                <option value="500">500+</option>
+                <option value="1000">1,000+</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>City</label>
+            <select id="cityFilter">
+                <option value="">All Bay Area</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>When</label>
+            <div class="quick-dates">
+                <button class="qd-btn active" onclick="setRange(this,'all')">All</button>
+                <button class="qd-btn"        onclick="setRange(this,'week')">This Week</button>
+                <button class="qd-btn"        onclick="setRange(this,'month')">This Month</button>
+                <button class="qd-btn"        onclick="setRange(this,'3month')">3 Months</button>
+            </div>
         </div>
     </div>
+
+    <div class="progressSection" id="ms-progress">
+        <div class="progressText" id="ms-progressText">Starting up…</div>
+        <div class="bar-track"><div class="progressBar" id="ms-progressBar"></div></div>
+    </div>
+
+    <div class="resultsHeader" id="ms-resultsHeader">
+        <span class="resultsCount" id="ms-resultsCount"></span>
+        <select class="sortSelect" id="sortSelect" onchange="applyFilters()">
+            <option value="date">Sort: Soonest First</option>
+            <option value="plays">Sort: Most Played</option>
+            <option value="artist">Sort: Artist A–Z</option>
+        </select>
+    </div>
+
+    <div class="cards" id="ms-cards"></div>
+    <div class="emptyMsg" id="ms-emptyMsg">No shows match your filters.<br>Try widening the date range or lowering the minimum play count.</div>
+    <div class="errorMsg" id="ms-errorMsg"></div>
+
 </div>
 
-<!-- Progress -->
-<div id="progressSection">
-    <div id="progressText">Starting up…</div>
-    <div class="bar-track"><div id="progressBar"></div></div>
-</div>
+<!-- ═══════════════ DISCOVER PANEL ═══════════════ -->
+<div class="panel" id="panel-discover">
 
-<!-- Results -->
-<div id="resultsHeader">
-    <span id="resultsCount"></span>
-    <select id="sortSelect" onchange="applyFilters()">
-        <option value="date">Sort: Soonest First</option>
-        <option value="plays">Sort: Most Played</option>
-        <option value="artist">Sort: Artist A–Z</option>
-    </select>
-</div>
+    <div class="splash" id="disc-splash">
+        <h2>Discover new artists playing near you</h2>
+        <p>Uses your top Last.fm artists to find similar acts you haven't heard yet,<br>then checks for upcoming Bay Area concerts.</p>
+        <button class="big-btn" onclick="loadRecommendations()">Find New Artists</button>
+    </div>
 
-<div id="cards"></div>
-<div id="emptyMsg">No shows match your filters.<br>Try widening the date range or lowering the minimum play count.</div>
-<div id="errorMsg" id="errorMsg"></div>
+    <div class="filtersBar" id="disc-filtersBar">
+        <div class="filter-group">
+            <label>Seeds (top artists)</label>
+            <select id="discSeedCount">
+                <option value="20">Top 20</option>
+                <option value="30" selected>Top 30</option>
+                <option value="40">Top 40</option>
+                <option value="50">Top 50</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Min Matches</label>
+            <select id="discMinMatches">
+                <option value="1">1+ seeds</option>
+                <option value="2" selected>2+ seeds</option>
+                <option value="3">3+ seeds</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>When</label>
+            <div class="quick-dates" id="disc-quickdates">
+                <button class="qd-btn active" onclick="setDiscRange(this,'all')">All</button>
+                <button class="qd-btn"        onclick="setDiscRange(this,'week')">This Week</button>
+                <button class="qd-btn"        onclick="setDiscRange(this,'month')">This Month</button>
+                <button class="qd-btn"        onclick="setDiscRange(this,'3month')">3 Months</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="progressSection" id="disc-progress">
+        <div class="progressText" id="disc-progressText">Starting up…</div>
+        <div class="bar-track"><div class="progressBar" id="disc-progressBar"></div></div>
+    </div>
+
+    <div class="resultsHeader" id="disc-resultsHeader">
+        <span class="resultsCount" id="disc-resultsCount"></span>
+        <select class="sortSelect" id="disc-sortSelect" onchange="applyDiscFilters()">
+            <option value="date">Sort: Soonest First</option>
+            <option value="score">Sort: Best Match</option>
+            <option value="artist">Sort: Artist A–Z</option>
+        </select>
+    </div>
+
+    <div class="cards" id="disc-cards"></div>
+    <div class="emptyMsg" id="disc-emptyMsg">No upcoming shows found for recommended artists.<br>Try lowering Min Matches or expanding your seed count.</div>
+    <div class="errorMsg" id="disc-errorMsg"></div>
+
+</div>
 
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const LASTFM_KEY  = "98911dfeb5e40162072b3bc1af478cd1";
 const LASTFM_USER = "thoM_Moht";
 const TM_KEY      = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB";
-const TM_LATLONG  = "37.8044,-122.2712";  // Oakland, CA
-const TM_RADIUS   = "50";                 // miles
-
+const TM_LATLONG  = "37.8044,-122.2712";
+const TM_RADIUS   = "50";
 const EB_KEY      = "RZ6OPWVOVYVVYDZMXA";
 const EB_LAT      = "37.8044";
 const EB_LNG      = "-122.2712";
@@ -305,9 +416,11 @@ const EB_RADIUS   = "50mi";
 const LIMIT       = 250;
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let allShows   = [];
-let maxPlays   = 1;
-let dateRange  = "all";
+let allShows      = [];
+let allDisc       = [];
+let maxPlays      = 1;
+let dateRange     = "all";
+let discDateRange = "all";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -316,54 +429,52 @@ function esc(s) {
     return (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-function setProgress(pct, msg) {
-    document.getElementById("progressBar").style.width = pct + "%";
-    document.getElementById("progressText").textContent = msg;
+function switchTab(name, btn) {
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("panel-" + name).classList.add("active");
+    btn.classList.add("active");
+    document.getElementById("myShowsRefreshBtn").style.display  = name === "myshows"  ? "block" : "none";
+    document.getElementById("discoverRefreshBtn").style.display = name === "discover" ? "block" : "none";
 }
 
-function show(id)  { document.getElementById(id).style.display = ""; }
-function hide(id)  { document.getElementById(id).style.display = "none"; }
-function flex(id)  { document.getElementById(id).style.display = "flex"; }
-
 // ── Last.fm ───────────────────────────────────────────────────────────────────
-async function fetchTopArtists(period) {
+async function fetchTopArtists(period, limit) {
     const url = "https://ws.audioscrobbler.com/2.0/?"
-        + new URLSearchParams({
-            method:  "user.gettopartists",
-            user:    LASTFM_USER,
-            api_key: LASTFM_KEY,
-            format:  "json",
-            limit:   LIMIT,
-            period,
-        });
+        + new URLSearchParams({ method: "user.gettopartists", user: LASTFM_USER,
+            api_key: LASTFM_KEY, format: "json", limit: limit || LIMIT, period });
     const res  = await fetch(url);
     const data = await res.json();
     if (data.error) throw new Error(data.message);
     return data.topartists.artist.map(a => ({ name: a.name, plays: parseInt(a.playcount, 10) }));
 }
 
-// ── Ticketmaster ─────────────────────────────────────────────────────────────
+async function fetchSimilarArtists(artistName, limit) {
+    try {
+        const url = "https://ws.audioscrobbler.com/2.0/?"
+            + new URLSearchParams({ method: "artist.getSimilar", artist: artistName,
+                api_key: LASTFM_KEY, format: "json", limit: limit || 20 });
+        const res  = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        const data = await res.json();
+        return (data.similarartists?.artist || []).map(a => ({ name: a.name, match: parseFloat(a.match) }));
+    } catch { return []; }
+}
 
-// Cache attraction IDs so we don't re-look them up
+// ── Ticketmaster ─────────────────────────────────────────────────────────────
 const tmAttractionCache = new Map();
 
 async function getTMAttractionId(artistName) {
     if (tmAttractionCache.has(artistName)) return tmAttractionCache.get(artistName);
     try {
-        const params = new URLSearchParams({
-            apikey:             TM_KEY,
-            keyword:            artistName,
-            classificationName: "Music",
-            size:               1,
-        });
+        const params = new URLSearchParams({ apikey: TM_KEY, keyword: artistName,
+            classificationName: "Music", size: 1 });
         const res = await fetch(
             `https://app.ticketmaster.com/discovery/v2/attractions.json?${params}`,
             { signal: AbortSignal.timeout(6000) }
         );
         if (!res.ok) { tmAttractionCache.set(artistName, null); return null; }
-        const data = await res.json();
+        const data       = await res.json();
         const attraction = data._embedded?.attractions?.[0];
-        // Only use it if the name closely matches
         if (!attraction) { tmAttractionCache.set(artistName, null); return null; }
         const match = attraction.name.toLowerCase().trim() === artistName.toLowerCase().trim();
         const id = match ? attraction.id : null;
@@ -375,27 +486,12 @@ async function getTMAttractionId(artistName) {
 async function fetchEvents(artistName) {
     try {
         const attractionId = await getTMAttractionId(artistName);
-        // If we found a precise attraction ID use it, otherwise fall back to keyword
         const params = attractionId
-            ? new URLSearchParams({
-                apikey:  TM_KEY,
-                attractionId,
-                latlong: TM_LATLONG,
-                radius:  TM_RADIUS,
-                unit:    "miles",
-                size:    10,
-                sort:    "date,asc",
-            })
-            : new URLSearchParams({
-                apikey:             TM_KEY,
-                keyword:            artistName,
-                latlong:            TM_LATLONG,
-                radius:             TM_RADIUS,
-                unit:               "miles",
-                classificationName: "Music",
-                size:               10,
-                sort:               "date,asc",
-            });
+            ? new URLSearchParams({ apikey: TM_KEY, attractionId,
+                latlong: TM_LATLONG, radius: TM_RADIUS, unit: "miles", size: 10, sort: "date,asc" })
+            : new URLSearchParams({ apikey: TM_KEY, keyword: artistName,
+                latlong: TM_LATLONG, radius: TM_RADIUS, unit: "miles",
+                classificationName: "Music", size: 10, sort: "date,asc" });
         const res = await fetch(
             `https://app.ticketmaster.com/discovery/v2/events.json?${params}`,
             { signal: AbortSignal.timeout(8000) }
@@ -410,17 +506,10 @@ async function fetchEvents(artistName) {
 async function fetchEventsEB(artistName) {
     try {
         const today = new Date().toISOString().split("T")[0] + "T00:00:00";
-        const params = new URLSearchParams({
-            token:                    EB_KEY,
-            q:                        artistName,
-            "location.latitude":      EB_LAT,
-            "location.longitude":     EB_LNG,
-            "location.within":        EB_RADIUS,
-            "categories":             "103",   // Music
-            "start_date.range_start": today,
-            expand:                   "venue",
-            sort_by:                  "date",
-        });
+        const params = new URLSearchParams({ token: EB_KEY, q: artistName,
+            "location.latitude": EB_LAT, "location.longitude": EB_LNG,
+            "location.within": EB_RADIUS, categories: "103",
+            "start_date.range_start": today, expand: "venue", sort_by: "date" });
         const res = await fetch(
             `https://www.eventbriteapi.com/v3/events/search/?${params}`,
             { signal: AbortSignal.timeout(8000) }
@@ -433,22 +522,13 @@ async function fetchEventsEB(artistName) {
             const addr  = venue.address || {};
             const date  = new Date(ev.start?.utc || ev.start?.local);
             if (isNaN(date.getTime()) || date <= new Date()) return null;
-            // Filter out events where the artist name doesn't appear in the title
-            const titleLower = (ev.name?.text || "").toLowerCase();
-            if (!titleLower.includes(artistLower)) return null;
+            if (!(ev.name?.text || "").toLowerCase().includes(artistLower)) return null;
             return {
-                eventId:       "eb_" + ev.id,
-                artist:        artistName,
-                showName:      ev.name?.text || artistName,
-                plays:         0,   // filled in by caller
-                date,
-                venue:         venue.name || "TBA",
-                city:          addr.city  || "",
-                state:         addr.region || "CA",
-                lineup:        [],
-                matchedArtists:[artistName],
-                ticketUrl:     ev.url || "",
-                source:        "eventbrite",
+                eventId: "eb_" + ev.id, artist: artistName,
+                showName: ev.name?.text || artistName, plays: 0, date,
+                venue: venue.name || "TBA", city: addr.city || "",
+                state: addr.region || "CA", lineup: [], matchedArtists: [artistName],
+                ticketUrl: ev.url || "", source: "eventbrite",
             };
         }).filter(Boolean);
     } catch { return []; }
@@ -458,150 +538,105 @@ function extractShowData(ev, artistName, plays) {
     const venue     = ev._embedded?.venues?.[0] || {};
     const city      = venue.city?.name  || "";
     const stateCode = venue.state?.stateCode || "";
-
-    // Use local date+time if available, fall back to UTC datetime
+    const start     = ev.dates?.start || {};
     let date;
-    const start = ev.dates?.start || {};
-    if (start.dateTime) {
-        date = new Date(start.dateTime);
-    } else if (start.localDate) {
-        date = new Date(`${start.localDate}T${start.localTime || "00:00:00"}`);
-    } else {
-        return null;
-    }
-
+    if (start.dateTime)      date = new Date(start.dateTime);
+    else if (start.localDate) date = new Date(`${start.localDate}T${start.localTime || "00:00:00"}`);
+    else return null;
     if (isNaN(date.getTime()) || date <= new Date()) return null;
-
-    // Support acts from attractions list (excluding headliner)
     const attractions = ev._embedded?.attractions || [];
-    const lineup = attractions
-        .map(a => a.name)
+    const lineup = attractions.map(a => a.name)
         .filter(n => n.toLowerCase() !== artistName.toLowerCase());
-
-    return {
-        eventId:   ev.id,
-        artist:    artistName,
-        showName:  ev.name || artistName,
-        plays,
-        date,
-        venue:     venue.name || "TBA",
-        city,
-        state:     stateCode,
-        lineup,
-        ticketUrl: ev.url || "",
-    };
+    return { eventId: ev.id, artist: artistName, showName: ev.name || artistName,
+        plays, date, venue: venue.name || "TBA", city, state: stateCode,
+        lineup, ticketUrl: ev.url || "" };
 }
 
-// ── Main load ─────────────────────────────────────────────────────────────────
+// ── MY SHOWS ──────────────────────────────────────────────────────────────────
 async function loadShows() {
-    // UI reset
-    hide("splash");
-    hide("errorMsg");
-    hide("emptyMsg");
-    hide("filtersBar");
-    hide("resultsHeader");
-    hide("cards");
-    show("progressSection");
-    document.getElementById("cards").innerHTML = "";
+    const ids = { splash: "ms-splash", filters: "ms-filtersBar", progress: "ms-progress",
+        progressText: "ms-progressText", progressBar: "ms-progressBar",
+        resultsHeader: "ms-resultsHeader", cards: "ms-cards",
+        emptyMsg: "ms-emptyMsg", errorMsg: "ms-errorMsg" };
 
-    const btn = document.getElementById("headerBtn");
-    btn.style.display = "block";
-    btn.disabled = true;
-    btn.textContent = "Loading…";
+    const hide = id => document.getElementById(id).style.display = "none";
+    const flex = id => document.getElementById(id).style.display = "flex";
+    const show = id => document.getElementById(id).style.display = "";
+
+    hide(ids.splash); hide(ids.errorMsg); hide(ids.emptyMsg);
+    hide(ids.filters); hide(ids.resultsHeader);
+    document.getElementById(ids.cards).innerHTML = "";
+    document.getElementById(ids.progress).style.display = "block";
+
+    const btn = document.getElementById("myShowsRefreshBtn");
+    btn.style.display = "block"; btn.disabled = true; btn.textContent = "Loading…";
+
+    const setP = (pct, msg) => {
+        document.getElementById(ids.progressBar).style.width = pct + "%";
+        document.getElementById(ids.progressText).textContent = msg;
+    };
 
     const period = document.getElementById("periodSelect").value;
-
-    // 1. Fetch artists
     let artists;
     try {
-        setProgress(2, "Fetching your top artists from Last.fm…");
-        artists = await fetchTopArtists(period);
+        setP(2, "Fetching your top artists from Last.fm…");
+        artists = await fetchTopArtists(period, LIMIT);
     } catch (e) {
-        hide("progressSection");
-        const el = document.getElementById("errorMsg");
+        hide(ids.progress);
+        const el = document.getElementById(ids.errorMsg);
         el.textContent = "Could not load Last.fm data: " + e.message;
         el.style.display = "block";
-        btn.disabled = false;
-        btn.textContent = "Retry";
+        btn.disabled = false; btn.textContent = "Retry";
         return;
     }
 
     maxPlays = Math.max(...artists.map(a => a.plays), 1);
-    const showMap = new Map();  // eventId -> show (deduplicates multi-artist events)
+    const showMap = new Map();
 
-    // 2. Check each artist
     for (let i = 0; i < artists.length; i++) {
         const { name, plays } = artists[i];
-        const pct = Math.round(((i + 1) / artists.length) * 100);
-        setProgress(pct, `[${i + 1} / ${artists.length}]  ${name}`);
+        setP(Math.round(((i + 1) / artists.length) * 100), `[${i + 1} / ${artists.length}]  ${name}`);
 
-        // Fetch from both sources in parallel
-        const [tmEvents, ebShows] = await Promise.all([
-            fetchEvents(name),
-            fetchEventsEB(name),
-        ]);
+        const [tmEvents, ebShows] = await Promise.all([fetchEvents(name), fetchEventsEB(name)]);
 
-        // Process Ticketmaster results
         for (const ev of tmEvents) {
-            const show = extractShowData(ev, name, plays);
-            if (!show) continue;
+            const s = extractShowData(ev, name, plays);
+            if (!s) continue;
             if (showMap.has(ev.id)) {
-                const existing = showMap.get(ev.id);
-                if (!existing.matchedArtists.includes(name)) {
-                    existing.matchedArtists.push(name);
-                    existing.plays = Math.max(existing.plays, plays);
+                const ex = showMap.get(ev.id);
+                if (!ex.matchedArtists.includes(name)) {
+                    ex.matchedArtists.push(name);
+                    ex.plays = Math.max(ex.plays, plays);
                 }
-            } else {
-                show.matchedArtists = [name];
-                showMap.set(ev.id, show);
-            }
+            } else { s.matchedArtists = [name]; showMap.set(ev.id, s); }
         }
-
-        // Process Eventbrite results
-        for (const show of ebShows) {
-            show.plays = plays;
-            // Dedup key: date + venue name (cross-platform shows may appear in both)
-            const dedupKey = `${show.date.toDateString()}_${show.venue.toLowerCase().replace(/\s+/g,"")}`;
-            if (showMap.has(dedupKey)) {
-                const existing = showMap.get(dedupKey);
-                if (!existing.matchedArtists.includes(name)) {
-                    existing.matchedArtists.push(name);
-                    existing.plays = Math.max(existing.plays, plays);
+        for (const s of ebShows) {
+            s.plays = plays;
+            const dk = `${s.date.toDateString()}_${s.venue.toLowerCase().replace(/\s+/g,"")}`;
+            if (showMap.has(dk)) {
+                const ex = showMap.get(dk);
+                if (!ex.matchedArtists.includes(name)) {
+                    ex.matchedArtists.push(name); ex.plays = Math.max(ex.plays, plays);
                 }
-            } else {
-                showMap.set(show.eventId, show);
-            }
+            } else { showMap.set(s.eventId, s); }
         }
-
         await sleep(250);
     }
 
     allShows = [...showMap.values()];
 
-    // 3. Populate city dropdown
     const cities = [...new Set(allShows.map(s => s.city))].sort();
     const cf = document.getElementById("cityFilter");
     cf.innerHTML = `<option value="">All Bay Area</option>`;
-    cities.forEach(c => {
-        const o = document.createElement("option");
-        o.value = c; o.textContent = c;
-        cf.appendChild(o);
-    });
+    cities.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; cf.appendChild(o); });
 
-    // 4. Show UI
-    hide("progressSection");
-    flex("filtersBar");
-    flex("resultsHeader");
-    show("cards");
-    btn.disabled = false;
-    btn.textContent = "Refresh";
-
+    hide(ids.progress); flex(ids.filters); flex(ids.resultsHeader); show(ids.cards);
+    btn.disabled = false; btn.textContent = "Refresh";
     applyFilters();
 }
 
-// ── Filters & render ──────────────────────────────────────────────────────────
 function setRange(el, range) {
-    document.querySelectorAll(".qd-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#ms-filtersBar .qd-btn").forEach(b => b.classList.remove("active"));
     el.classList.add("active");
     dateRange = range;
     applyFilters();
@@ -612,32 +647,146 @@ function applyFilters() {
     const cityVal  = document.getElementById("cityFilter").value.toLowerCase();
     const sortBy   = document.getElementById("sortSelect").value;
     const now      = new Date();
-
     let cutoff = null;
     if (dateRange === "week")   { cutoff = new Date(now); cutoff.setDate(now.getDate() + 7); }
     if (dateRange === "month")  { cutoff = new Date(now); cutoff.setMonth(now.getMonth() + 1); }
     if (dateRange === "3month") { cutoff = new Date(now); cutoff.setMonth(now.getMonth() + 3); }
 
     let list = allShows.filter(s => {
-        if (s.plays < minPlays)                                   return false;
-        if (cityVal && !s.city.toLowerCase().includes(cityVal))   return false;
-        if (cutoff  && s.date > cutoff)                           return false;
+        if (s.plays < minPlays) return false;
+        if (cityVal && !s.city.toLowerCase().includes(cityVal)) return false;
+        if (cutoff  && s.date > cutoff) return false;
         return true;
     });
-
     if (sortBy === "date")   list.sort((a, b) => a.date - b.date);
     if (sortBy === "plays")  list.sort((a, b) => b.plays - a.plays);
     if (sortBy === "artist") list.sort((a, b) => a.artist.localeCompare(b.artist));
 
-    document.getElementById("resultsCount").textContent =
-        `${list.length} show${list.length !== 1 ? "s" : ""} found`;
-
-    renderCards(list);
+    document.getElementById("ms-resultsCount").textContent = `${list.length} show${list.length !== 1 ? "s" : ""} found`;
+    renderCards(list, "ms-cards", "ms-emptyMsg", false);
 }
 
-function renderCards(shows) {
-    const container = document.getElementById("cards");
-    const emptyMsg  = document.getElementById("emptyMsg");
+// ── DISCOVER ──────────────────────────────────────────────────────────────────
+async function loadRecommendations() {
+    const hide = id => document.getElementById(id).style.display = "none";
+    const flex = id => document.getElementById(id).style.display = "flex";
+    const show = id => document.getElementById(id).style.display = "";
+
+    hide("disc-splash"); hide("disc-errorMsg"); hide("disc-emptyMsg");
+    hide("disc-filtersBar"); hide("disc-resultsHeader");
+    document.getElementById("disc-cards").innerHTML = "";
+    document.getElementById("disc-progress").style.display = "block";
+
+    const btn = document.getElementById("discoverRefreshBtn");
+    btn.style.display = "block"; btn.disabled = true; btn.textContent = "Loading…";
+
+    const setP = (pct, msg) => {
+        document.getElementById("disc-progressBar").style.width = pct + "%";
+        document.getElementById("disc-progressText").textContent = msg;
+    };
+
+    const seedCount  = parseInt(document.getElementById("discSeedCount").value, 10);
+    const minMatches = parseInt(document.getElementById("discMinMatches").value, 10);
+
+    // 1. Fetch seed artists
+    let seeds;
+    try {
+        setP(2, "Fetching your top artists from Last.fm…");
+        seeds = await fetchTopArtists("overall", seedCount);
+    } catch (e) {
+        hide("disc-progress");
+        const el = document.getElementById("disc-errorMsg");
+        el.textContent = "Could not load Last.fm data: " + e.message;
+        el.style.display = "block";
+        btn.disabled = false; btn.textContent = "Retry";
+        return;
+    }
+
+    const knownSet = new Set(seeds.map(a => a.name.toLowerCase()));
+
+    // 2. Get similar artists for each seed
+    const candidates = new Map(); // name -> {score, because[]}
+    for (let i = 0; i < seeds.length; i++) {
+        const { name } = seeds[i];
+        const pct = Math.round(5 + ((i + 1) / seeds.length) * 40);
+        setP(pct, `Finding similar artists… [${i + 1}/${seeds.length}] ${name}`);
+        const similar = await fetchSimilarArtists(name, 20);
+        for (const { name: simName, match } of similar) {
+            if (knownSet.has(simName.toLowerCase())) continue;
+            if (!candidates.has(simName)) candidates.set(simName, { score: 0, because: [] });
+            const c = candidates.get(simName);
+            c.score += match;
+            c.because.push(name);
+        }
+        await sleep(120);
+    }
+
+    // 3. Filter by min matches and rank
+    const ranked = [...candidates.entries()]
+        .filter(([, d]) => d.because.length >= minMatches)
+        .sort((a, b) => b[1].score - a[1].score);
+
+    setP(48, `Found ${ranked.length} recommended artists. Checking for shows…`);
+
+    // 4. Check Ticketmaster for each recommended artist
+    const showMap = new Map();
+    for (let i = 0; i < ranked.length; i++) {
+        const [artistName, data] = ranked[i];
+        const pct = Math.round(48 + ((i + 1) / ranked.length) * 50);
+        setP(pct, `Checking shows… [${i + 1}/${ranked.length}] ${artistName}`);
+
+        const tmEvents = await fetchEvents(artistName);
+        for (const ev of tmEvents) {
+            const s = extractShowData(ev, artistName, 0);
+            if (!s) continue;
+            s.score   = data.score;
+            s.because = data.because.slice(0, 3);
+            s.isNew   = true;
+            showMap.set(ev.id + artistName, s);
+        }
+        await sleep(200);
+    }
+
+    allDisc = [...showMap.values()];
+
+    setP(100, "Done!");
+    hide("disc-progress");
+    flex("disc-filtersBar");
+    flex("disc-resultsHeader");
+    show("disc-cards");
+    btn.disabled = false; btn.textContent = "Refresh";
+    applyDiscFilters();
+}
+
+function setDiscRange(el, range) {
+    document.querySelectorAll("#disc-quickdates .qd-btn").forEach(b => b.classList.remove("active"));
+    el.classList.add("active");
+    discDateRange = range;
+    applyDiscFilters();
+}
+
+function applyDiscFilters() {
+    const sortBy = document.getElementById("disc-sortSelect").value;
+    const now    = new Date();
+    let cutoff   = null;
+    if (discDateRange === "week")   { cutoff = new Date(now); cutoff.setDate(now.getDate() + 7); }
+    if (discDateRange === "month")  { cutoff = new Date(now); cutoff.setMonth(now.getMonth() + 1); }
+    if (discDateRange === "3month") { cutoff = new Date(now); cutoff.setMonth(now.getMonth() + 3); }
+
+    let list = allDisc.filter(s => !cutoff || s.date <= cutoff);
+    if (sortBy === "date")   list.sort((a, b) => a.date - b.date);
+    if (sortBy === "score")  list.sort((a, b) => b.score - a.score);
+    if (sortBy === "artist") list.sort((a, b) => a.artist.localeCompare(b.artist));
+
+    document.getElementById("disc-resultsCount").textContent =
+        `${list.length} show${list.length !== 1 ? "s" : ""} found`;
+    renderCards(list, "disc-cards", "disc-emptyMsg", true);
+}
+
+// ── Shared card renderer ──────────────────────────────────────────────────────
+function renderCards(shows, cardsId, emptyId, isDiscover) {
+    const container = document.getElementById(cardsId);
+    const emptyMsg  = document.getElementById(emptyId);
 
     if (shows.length === 0) {
         container.innerHTML = "";
@@ -650,20 +799,15 @@ function renderCards(shows) {
         const dateStr = s.date.toLocaleDateString("en-US", {
             weekday: "short", month: "short", day: "numeric", year: "numeric"
         });
-        const timeStr = s.date.toLocaleTimeString("en-US", {
-            hour: "numeric", minute: "2-digit"
-        });
+        const timeStr = s.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-        // Show all matched artists from your library
-        const artistLabel = s.matchedArtists.length > 1
-            ? s.matchedArtists.join(" · ")
+        const artistLabel = (s.matchedArtists || [s.artist]).length > 1
+            ? (s.matchedArtists || [s.artist]).join(" · ")
             : s.artist;
 
-        // Support acts (not from your library)
-        const lineupHtml = s.lineup.length
+        const lineupHtml = (s.lineup || []).length
             ? `<div class="card-lineup">+ ${esc(s.lineup.join(", "))}</div>` : "";
 
-        // Show event name if it differs meaningfully from artist name
         const showTitle = s.showName && s.showName.toLowerCase() !== s.artist.toLowerCase()
             ? `<div class="card-lineup" style="color:#888;font-style:italic">${esc(s.showName)}</div>` : "";
 
@@ -671,20 +815,33 @@ function renderCards(shows) {
             ? `<a class="card-link tickets" href="${esc(s.ticketUrl)}" target="_blank" rel="noopener">Tickets</a>`
             : "";
 
-        const playsWidth = Math.max(10, Math.round((s.plays / maxPlays) * 100));
-        const playsColor = playsWidth > 66 ? "#e94560"
-                         : playsWidth > 33 ? "#f0a500"
-                         : "#aaa";
+        const badgeHtml = isDiscover
+            ? `<span class="card-new-badge">New</span>`
+            : (() => {
+                const playsWidth = Math.max(10, Math.round((s.plays / maxPlays) * 100));
+                const playsColor = playsWidth > 66 ? "#e94560" : playsWidth > 33 ? "#f0a500" : "#aaa";
+                return `<span class="card-plays">${s.plays.toLocaleString()} plays</span>
+                    </div><div style="height:3px;background:#f0f0f2;border-radius:99px;margin:4px 0 6px">
+                    <div style="height:100%;width:${playsWidth}%;background:${playsColor};border-radius:99px"></div>
+                </div><div style="display:none"`;
+            })();
+
+        const becauseHtml = isDiscover && s.because?.length
+            ? `<div class="card-because">Because you like: ${esc(s.because.join(", "))}</div>` : "";
 
         return `
-<div class="card">
+<div class="card${isDiscover ? " discover" : ""}">
     <div class="card-top">
         <span class="card-artist">${esc(artistLabel)}</span>
-        <span class="card-plays">${s.plays.toLocaleString()} plays</span>
+        ${isDiscover
+            ? `<span class="card-new-badge">New</span>`
+            : `<span class="card-plays">${s.plays.toLocaleString()} plays</span>`}
     </div>
-    <div style="height:3px;background:#f0f0f2;border-radius:99px;margin:4px 0 6px">
-        <div style="height:100%;width:${playsWidth}%;background:${playsColor};border-radius:99px"></div>
-    </div>
+    ${!isDiscover ? `<div style="height:3px;background:#f0f0f2;border-radius:99px;margin:4px 0 6px">
+        <div style="height:100%;width:${Math.max(10,Math.round((s.plays/maxPlays)*100))}%;background:${
+            Math.round((s.plays/maxPlays)*100)>66?"#e94560":Math.round((s.plays/maxPlays)*100)>33?"#f0a500":"#aaa"
+        };border-radius:99px"></div></div>` : ""}
+    ${becauseHtml}
     ${showTitle}
     <div class="card-date">${esc(dateStr)} &nbsp;·&nbsp; ${esc(timeStr)}</div>
     <div class="card-venue">${esc(s.venue)}</div>
@@ -696,11 +853,9 @@ function renderCards(shows) {
 }
 
 // ── Wire up live filters ──────────────────────────────────────────────────────
-["minPlaysSelect", "cityFilter"].forEach(id => {
+["minPlaysSelect","cityFilter"].forEach(id => {
     document.getElementById(id).addEventListener("change", applyFilters);
 });
-
-// Period change triggers a full reload
 document.getElementById("periodSelect").addEventListener("change", loadShows);
 </script>
 </body>
