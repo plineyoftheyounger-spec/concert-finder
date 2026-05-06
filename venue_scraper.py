@@ -3,12 +3,15 @@ Bay Area small venue scraper.
 Scrapes event calendars and cross-references against your TIDAL library.
 
 Venues covered:
-  Yoshi's Oakland    — HTML scrape
-  Café du Nord       — HTML scrape (TimeWire)
-  Brick & Mortar     — HTML scrape (TimeWire)
-  Boom Boom Room     — HTML scrape
-  Rickshaw Stop      — HTML scrape
-  The Chapel SF      — Ticketmaster venue API (venue ID KovZ917AOMf)
+  Yoshi's Oakland        — HTML scrape
+  Café du Nord           — HTML scrape (TimeWire)
+  Brick & Mortar         — HTML scrape (TimeWire)
+  Boom Boom Room         — HTML scrape
+  Rickshaw Stop          — HTML scrape
+  The Chapel SF          — Ticketmaster venue API
+  The Independent SF     — Ticketmaster venue API
+  Great American Music Hall — Ticketmaster venue API
+  Folk Yeah (promoter)   — folkyeah.com HTML scrape
 """
 
 import csv
@@ -29,9 +32,14 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 # --- Config ---
 USER_DATA_DIR = r"C:\Users\Thomas\AI\concert-finder\user_data_26161906"
 OUTPUT_PATH   = r"C:\Users\Thomas\AI\venue_shows.txt"
-TM_KEY        = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB"
+TM_KEY = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB"
 
-CHAPEL_TM_ID  = "KovZ917AOMf"   # The Chapel SF on Ticketmaster
+# Ticketmaster venue IDs for small Bay Area venues
+TM_VENUES = [
+    {"id": "KovZ917AOMf",  "name": "The Chapel",              "city": "San Francisco"},
+    {"id": "KovZpZAAl7AA", "name": "The Independent",         "city": "San Francisco"},
+    {"id": "KovZpZAJk7aA", "name": "Great American Music Hall","city": "San Francisco"},
+]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -271,16 +279,16 @@ def scrape_rickshaw(max_pages=5):
     return shows
 
 
-def scrape_chapel(max_pages=5):
-    """The Chapel SF — queried via Ticketmaster venue API."""
-    print("  The Chapel SF (Ticketmaster)...")
+def scrape_ticketmaster_venue(venue_id, venue_name, city, max_pages=5):
+    """Generic Ticketmaster venue scraper — works for any venue with a TM ID."""
+    print(f"  {venue_name} (Ticketmaster)...")
     shows = []
 
     for page in range(max_pages):
         try:
             r = requests.get(
                 "https://app.ticketmaster.com/discovery/v2/events.json",
-                params={"apikey": TM_KEY, "venueId": CHAPEL_TM_ID,
+                params={"apikey": TM_KEY, "venueId": venue_id,
                         "size": 20, "page": page, "sort": "date,asc"},
                 timeout=10,
             )
@@ -291,35 +299,96 @@ def scrape_chapel(max_pages=5):
                 break
 
             for ev in events:
-                start     = ev.get("dates", {}).get("start", {})
-                date_str  = start.get("localDate", "")
-                time_str  = start.get("localTime", "")
-                date      = parse_date(date_str)
+                start    = ev.get("dates", {}).get("start", {})
+                date     = parse_date(start.get("localDate", ""))
+                time_str = start.get("localTime", "")
                 if not date or date < NOW:
                     continue
 
                 attractions = ev.get("_embedded", {}).get("attractions", [])
                 artist  = attractions[0]["name"] if attractions else ev.get("name", "")
-                support = [a["name"] for a in attractions[1:]] if len(attractions) > 1 else []
-                ticket  = ev.get("url", "")
+                support = [a["name"] for a in attractions[1:]]
 
                 shows.append({
-                    "venue":   "The Chapel",
-                    "city":    "San Francisco",
+                    "venue":   venue_name,
+                    "city":    city,
                     "artist":  artist,
                     "support": support,
                     "date":    date,
                     "time":    time_str[:5] if time_str else "",
-                    "ticket":  ticket,
+                    "ticket":  ev.get("url", ""),
                 })
 
             if page >= data.get("page", {}).get("totalPages", 1) - 1:
                 break
         except Exception as e:
-            print(f"    ! Ticketmaster error: {e}")
+            print(f"    ! Ticketmaster error ({venue_name}): {e}")
             break
 
         time.sleep(0.3)
+
+    return shows
+
+
+def scrape_folkyeah():
+    """Folk Yeah promoter — folkyeah.com Squarespace site, static HTML."""
+    print("  Folk Yeah (folkyeah.com)...")
+    shows = []
+    soup  = fetch("https://folkyeah.com/")
+    if not soup:
+        return shows
+
+    for project in soup.select("div.project.gallery-project"):
+        desc = project.select_one("div.project-description")
+        if not desc:
+            continue
+
+        # Ticket link is the first <a> in the description
+        ticket_el = desc.select_one("a[href]")
+        ticket    = ticket_el["href"] if ticket_el else ""
+
+        # All text lines from <p> and <strong> tags
+        lines = [t.strip() for t in desc.get_text(separator="\n").splitlines() if t.strip()]
+        # Skip boilerplate lines
+        skip  = {"purchase tickets here", "(((folkyeah!))) presents", "(((folkyeah!))) present",
+                 "all sales final.", "21+", "all ages", "doors", "show", "gates"}
+
+        artist, venue_name, city_name, date = None, None, None, None
+
+        for line in lines:
+            ll = line.lower()
+            if any(s in ll for s in skip) or "present" in ll or "plus::" in ll:
+                continue
+            d = parse_date(line)
+            if d:
+                date = d
+                continue
+            # Venue tends to be a known venue name
+            known_venues = ["the chapel", "rickshaw stop", "moe's alley", "great american",
+                            "freight", "independent", "brick", "café du nord", "cafe du nord",
+                            "henry miller", "pappy", "fox theater", "the observatory"]
+            if any(v in ll for v in known_venues):
+                venue_name = line
+                continue
+            if re.search(r",\s*(ca|california|san francisco|oakland|berkeley|santa cruz)", ll):
+                city_name = line
+                continue
+            if artist is None and line.isupper() and len(line) > 2:
+                artist = line.title()
+
+        if not artist or not date or date < NOW:
+            continue
+
+        shows.append({
+            "venue":   venue_name or "Folk Yeah Event",
+            "city":    city_name  or "Bay Area",
+            "artist":  artist,
+            "support": [],
+            "date":    date,
+            "time":    "",
+            "ticket":  ticket,
+            "promoter": "Folk Yeah",
+        })
 
     return shows
 
@@ -334,11 +403,13 @@ def main():
 
     all_shows = []
     all_shows += scrape_yoshis()
-    all_shows += scrape_chapel()
+    for v in TM_VENUES:
+        all_shows += scrape_ticketmaster_venue(v["id"], v["name"], v["city"])
     all_shows += scrape_timewire("https://cafedunord.com/calendar",              "Café du Nord",   "San Francisco")
     all_shows += scrape_timewire("https://www.brickandmortarmusic.com/shows",    "Brick & Mortar", "San Francisco")
     all_shows += scrape_boomboom()
     all_shows += scrape_rickshaw()
+    all_shows += scrape_folkyeah()
 
     all_shows.sort(key=lambda x: x["date"])
 
