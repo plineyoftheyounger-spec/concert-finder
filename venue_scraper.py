@@ -2,11 +2,13 @@
 Bay Area small venue scraper.
 Scrapes event calendars and cross-references against your TIDAL library.
 
-Venues covered (static HTML):
-  Yoshi's Oakland, Café du Nord, Brick & Mortar, Boom Boom Room, Rickshaw Stop
-
-Venues needing browser rendering (TODO):
-  The Chapel (SeeTickets JS), The Independent (FullCalendar JS)
+Venues covered:
+  Yoshi's Oakland    — HTML scrape
+  Café du Nord       — HTML scrape (TimeWire)
+  Brick & Mortar     — HTML scrape (TimeWire)
+  Boom Boom Room     — HTML scrape
+  Rickshaw Stop      — HTML scrape
+  The Chapel SF      — Ticketmaster venue API (venue ID KovZ917AOMf)
 """
 
 import csv
@@ -27,6 +29,9 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 # --- Config ---
 USER_DATA_DIR = r"C:\Users\Thomas\AI\concert-finder\user_data_26161906"
 OUTPUT_PATH   = r"C:\Users\Thomas\AI\venue_shows.txt"
+TM_KEY        = "WSWXS6sQy6UVsG7Vha76AypK1UoancLB"
+
+CHAPEL_TM_ID  = "KovZ917AOMf"   # The Chapel SF on Ticketmaster
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -266,6 +271,59 @@ def scrape_rickshaw(max_pages=5):
     return shows
 
 
+def scrape_chapel(max_pages=5):
+    """The Chapel SF — queried via Ticketmaster venue API."""
+    print("  The Chapel SF (Ticketmaster)...")
+    shows = []
+
+    for page in range(max_pages):
+        try:
+            r = requests.get(
+                "https://app.ticketmaster.com/discovery/v2/events.json",
+                params={"apikey": TM_KEY, "venueId": CHAPEL_TM_ID,
+                        "size": 20, "page": page, "sort": "date,asc"},
+                timeout=10,
+            )
+            r.raise_for_status()
+            data   = r.json()
+            events = data.get("_embedded", {}).get("events", [])
+            if not events:
+                break
+
+            for ev in events:
+                start     = ev.get("dates", {}).get("start", {})
+                date_str  = start.get("localDate", "")
+                time_str  = start.get("localTime", "")
+                date      = parse_date(date_str)
+                if not date or date < NOW:
+                    continue
+
+                attractions = ev.get("_embedded", {}).get("attractions", [])
+                artist  = attractions[0]["name"] if attractions else ev.get("name", "")
+                support = [a["name"] for a in attractions[1:]] if len(attractions) > 1 else []
+                ticket  = ev.get("url", "")
+
+                shows.append({
+                    "venue":   "The Chapel",
+                    "city":    "San Francisco",
+                    "artist":  artist,
+                    "support": support,
+                    "date":    date,
+                    "time":    time_str[:5] if time_str else "",
+                    "ticket":  ticket,
+                })
+
+            if page >= data.get("page", {}).get("totalPages", 1) - 1:
+                break
+        except Exception as e:
+            print(f"    ! Ticketmaster error: {e}")
+            break
+
+        time.sleep(0.3)
+
+    return shows
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -276,6 +334,7 @@ def main():
 
     all_shows = []
     all_shows += scrape_yoshis()
+    all_shows += scrape_chapel()
     all_shows += scrape_timewire("https://cafedunord.com/calendar",              "Café du Nord",   "San Francisco")
     all_shows += scrape_timewire("https://www.brickandmortarmusic.com/shows",    "Brick & Mortar", "San Francisco")
     all_shows += scrape_boomboom()
@@ -298,8 +357,7 @@ def main():
     for s in new_shows:
         _print_show(s)
 
-    print(f"\n\nNOTE: The Chapel and The Independent use JavaScript rendering")
-    print(f"and cannot be scraped without a browser. Coming in the next update.")
+    print(f"\n\nNOTE: The Independent uses JavaScript rendering and is not yet covered.")
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(f"Bay Area Venue Shows — {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
