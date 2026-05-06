@@ -241,6 +241,58 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 .card-link.info    { background: #f0f0f2; color: #333; }
 .card-link.tickets { background: #e94560; color: white; }
 
+/* ---- Explore artist cards ---- */
+.artist-grid {
+    padding: 16px 32px 48px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+.artist-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 16px 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    border-left: 4px solid #059669;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.artist-card-name { font-size: 1rem; font-weight: 700; color: #1a1a2e; }
+.artist-card-because { font-size: 0.78rem; color: #059669; font-style: italic; }
+.artist-card-seeds {
+    font-size: 0.72rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+.match-bar-track {
+    background: #f0f0f2;
+    border-radius: 99px;
+    height: 4px;
+    margin: 4px 0 6px;
+}
+.match-bar-fill {
+    height: 100%;
+    background: #059669;
+    border-radius: 99px;
+}
+.artist-links { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.artist-link {
+    display: inline-block;
+    padding: 4px 11px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.12s;
+    background: #f0f0f2;
+    color: #333;
+}
+.artist-link:hover { opacity: 0.75; }
+.artist-link.lfm  { background: #d51007; color: white; }
+.artist-link.spot { background: #1db954; color: white; }
+.artist-link.yt   { background: #ff0000; color: white; }
+
 /* ---- Empty / Error ---- */
 .emptyMsg, .errorMsg {
     display: none;
@@ -267,10 +319,12 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
         </div>
         <button class="load-btn" id="myShowsRefreshBtn" onclick="loadShows()" style="display:none">Refresh</button>
         <button class="load-btn" id="discoverRefreshBtn" onclick="loadRecommendations()" style="display:none">Refresh</button>
+        <button class="load-btn" id="exploreRefreshBtn"  onclick="loadExplore()"          style="display:none">Refresh</button>
     </div>
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('myshows', this)">My Shows</button>
         <button class="tab-btn"        onclick="switchTab('discover', this)">Discover</button>
+        <button class="tab-btn"        onclick="switchTab('explore', this)">Artists to Explore</button>
     </div>
 </header>
 
@@ -402,6 +456,59 @@ header p  { font-size: 0.82rem; opacity: 0.55; margin-top: 3px; }
 
 </div>
 
+<!-- ═══════════════ EXPLORE PANEL ═══════════════ -->
+<div class="panel" id="panel-explore">
+
+    <div class="splash" id="exp-splash">
+        <h2>Artists to explore</h2>
+        <p>Find new artists based on your taste — no concerts needed.<br>
+           Get quick links to listen on Last.fm, Spotify, and YouTube.</p>
+        <button class="big-btn" onclick="loadExplore()">Find Artists</button>
+    </div>
+
+    <div class="filtersBar" id="exp-filtersBar">
+        <div class="filter-group">
+            <label>Seeds (top artists)</label>
+            <select id="expSeedCount">
+                <option value="20">Top 20</option>
+                <option value="30" selected>Top 30</option>
+                <option value="40">Top 40</option>
+                <option value="50">Top 50</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Min Matches</label>
+            <select id="expMinMatches">
+                <option value="1" selected>1+ seeds</option>
+                <option value="2">2+ seeds</option>
+                <option value="3">3+ seeds</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Sort</label>
+            <select id="exp-sortSelect" onchange="applyExploreFilters()">
+                <option value="score">Best Match</option>
+                <option value="seeds">Most Seeds</option>
+                <option value="artist">Artist A–Z</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="progressSection" id="exp-progress">
+        <div class="progressText" id="exp-progressText">Starting up…</div>
+        <div class="bar-track"><div class="progressBar" id="exp-progressBar"></div></div>
+    </div>
+
+    <div class="resultsHeader" id="exp-resultsHeader">
+        <span class="resultsCount" id="exp-resultsCount"></span>
+    </div>
+
+    <div class="artist-grid" id="exp-grid"></div>
+    <div class="emptyMsg"  id="exp-emptyMsg">No recommendations found. Try lowering Min Matches.</div>
+    <div class="errorMsg"  id="exp-errorMsg"></div>
+
+</div>
+
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const LASTFM_KEY  = "98911dfeb5e40162072b3bc1af478cd1";
@@ -436,6 +543,7 @@ function switchTab(name, btn) {
     btn.classList.add("active");
     document.getElementById("myShowsRefreshBtn").style.display  = name === "myshows"  ? "block" : "none";
     document.getElementById("discoverRefreshBtn").style.display = name === "discover" ? "block" : "none";
+    document.getElementById("exploreRefreshBtn").style.display  = name === "explore"  ? "block" : "none";
 }
 
 // ── Last.fm ───────────────────────────────────────────────────────────────────
@@ -848,6 +956,119 @@ function renderCards(shows, cardsId, emptyId, isDiscover) {
     <div class="card-city">${esc(s.city)}, ${esc(s.state)}</div>
     ${lineupHtml}
     ${linksHtml ? `<div class="card-links">${linksHtml}</div>` : ""}
+</div>`;
+    }).join("");
+}
+
+// ── EXPLORE ───────────────────────────────────────────────────────────────────
+let allExplore = [];
+
+async function loadExplore() {
+    const hide = id => document.getElementById(id).style.display = "none";
+    const flex = id => document.getElementById(id).style.display = "flex";
+    const show = id => document.getElementById(id).style.display = "";
+
+    hide("exp-splash"); hide("exp-errorMsg"); hide("exp-emptyMsg");
+    hide("exp-filtersBar"); hide("exp-resultsHeader");
+    document.getElementById("exp-grid").innerHTML = "";
+    document.getElementById("exp-progress").style.display = "block";
+
+    const btn = document.getElementById("exploreRefreshBtn");
+    btn.style.display = "block"; btn.disabled = true; btn.textContent = "Loading…";
+
+    const setP = (pct, msg) => {
+        document.getElementById("exp-progressBar").style.width = pct + "%";
+        document.getElementById("exp-progressText").textContent = msg;
+    };
+
+    const seedCount  = parseInt(document.getElementById("expSeedCount").value, 10);
+    const minMatches = parseInt(document.getElementById("expMinMatches").value, 10);
+
+    let seeds;
+    try {
+        setP(5, "Fetching your top artists from Last.fm…");
+        seeds = await fetchTopArtists("overall", seedCount);
+    } catch (e) {
+        hide("exp-progress");
+        const el = document.getElementById("exp-errorMsg");
+        el.textContent = "Could not load Last.fm data: " + e.message;
+        el.style.display = "block";
+        btn.disabled = false; btn.textContent = "Retry";
+        return;
+    }
+
+    const knownSet  = new Set(seeds.map(a => a.name.toLowerCase()));
+    const maxScore  = { val: 0 };
+    const candidates = new Map();
+
+    for (let i = 0; i < seeds.length; i++) {
+        const { name } = seeds[i];
+        setP(Math.round(5 + ((i + 1) / seeds.length) * 90), `Finding similar artists… [${i + 1}/${seeds.length}] ${name}`);
+        const similar = await fetchSimilarArtists(name, 20);
+        for (const { name: simName, match } of similar) {
+            if (knownSet.has(simName.toLowerCase())) continue;
+            if (!candidates.has(simName)) candidates.set(simName, { score: 0, because: [] });
+            const c = candidates.get(simName);
+            c.score += match;
+            c.because.push(name);
+            if (c.score > maxScore.val) maxScore.val = c.score;
+        }
+        await sleep(120);
+    }
+
+    allExplore = [...candidates.entries()]
+        .filter(([, d]) => d.because.length >= minMatches)
+        .map(([name, d]) => ({ name, score: d.score, because: d.because, seeds: d.because.length, maxScore: maxScore.val }));
+
+    setP(100, "Done!");
+    hide("exp-progress");
+    flex("exp-filtersBar");
+    flex("exp-resultsHeader");
+    show("exp-grid");
+    btn.disabled = false; btn.textContent = "Refresh";
+    applyExploreFilters();
+}
+
+function applyExploreFilters() {
+    const sortBy = document.getElementById("exp-sortSelect").value;
+    let list = [...allExplore];
+    if (sortBy === "score")  list.sort((a, b) => b.score - a.score);
+    if (sortBy === "seeds")  list.sort((a, b) => b.seeds - a.seeds);
+    if (sortBy === "artist") list.sort((a, b) => a.name.localeCompare(b.name));
+
+    document.getElementById("exp-resultsCount").textContent =
+        `${list.length} artist${list.length !== 1 ? "s" : ""} to explore`;
+
+    const grid    = document.getElementById("exp-grid");
+    const emptyEl = document.getElementById("exp-emptyMsg");
+
+    if (list.length === 0) {
+        grid.innerHTML = "";
+        emptyEl.style.display = "block";
+        return;
+    }
+    emptyEl.style.display = "none";
+
+    const globalMax = list[0]?.score || 1;
+
+    grid.innerHTML = list.map(a => {
+        const barPct  = Math.max(8, Math.round((a.score / globalMax) * 100));
+        const because = a.because.slice(0, 3).join(", ");
+        const seedTxt = `recommended by ${a.seeds} of your top artists`;
+        const lfmUrl  = `https://www.last.fm/music/${encodeURIComponent(a.name)}`;
+        const spotUrl = `https://open.spotify.com/search/${encodeURIComponent(a.name)}`;
+        const ytUrl   = `https://www.youtube.com/results?search_query=${encodeURIComponent(a.name + " music")}`;
+        return `
+<div class="artist-card">
+    <div class="artist-card-name">${esc(a.name)}</div>
+    <div class="match-bar-track"><div class="match-bar-fill" style="width:${barPct}%"></div></div>
+    <div class="artist-card-because">Because you like: ${esc(because)}</div>
+    <div class="artist-card-seeds">${esc(seedTxt)}</div>
+    <div class="artist-links">
+        <a class="artist-link lfm"  href="${lfmUrl}"  target="_blank" rel="noopener">Last.fm</a>
+        <a class="artist-link spot" href="${spotUrl}" target="_blank" rel="noopener">Spotify</a>
+        <a class="artist-link yt"   href="${ytUrl}"   target="_blank" rel="noopener">YouTube</a>
+    </div>
 </div>`;
     }).join("");
 }
